@@ -1,40 +1,43 @@
-const express = require('express');
-const mongodb = require('mongodb');
+const router = require('express').Router();
+const Comment = require('../../models/comment');
+require('../params')(router);
 
-const router = express.Router();
-
-// Get Posts
+// Get Comments
 router.get('/', async (req, res) => {
-  const posts = await loadCommentsCollection();
-  res.send(await posts.find({}).toArray());
-});
+  Comment.find({}, (err, comments) => {
+    var commentMap = {};
 
-// Add Post
-router.post('/', async (req, res) => {
-  const posts = await loadCommentsCollection();
-  await posts.insertOne({
-    text: req.body.text,
-    createdAt: new Date()
+    comments.forEach((comment) => {
+      commentMap[comment._id] = comments;
+    });
+
+    res.send(commentMap);
   });
-  res.status(201).send();
 });
 
-// Delete Post
+// Add Comment
+router.post('/new/:post', async (req, res) => {
+  const comment = new Comment({
+    content: req.body.content,
+    post: req.post,
+    date: Date.now(),
+  });
+  try {
+    const savedComment = await comment.save((err, newComment) => {
+      req.post.comments.push(newComment);
+      req.post.save();
+    });
+    res.send(savedComment);
+  } catch (err) {
+    res.status(400).send(err);
+  }
+});
+
+// Delete Comment
 router.delete('/:id', async (req, res) => {
-  const posts = await loadCommentsCollection();
-  await posts.deleteOne({ _id: new mongodb.ObjectID(req.params.id) });
-  res.status(200).send({});
+  Comment.deleteOne({ _id: req.params.id }, err => {
+    res.redirect('/');
+  });
 });
-
-async function loadCommentsCollection() {
-  const client = await mongodb.MongoClient.connect(
-    'mongodb+srv://dany-costa:E3AzE6ezU@cluster0-o1ac3.mongodb.net/test?retryWrites=true&w=majority',
-    {
-        useUnifiedTopology: true
-    }
-  );
-
-  return client.db('blog').collection('comments');
-}
 
 module.exports = router;

@@ -1,40 +1,39 @@
-const express = require('express');
-const mongodb = require('mongodb');
+const router = require('express').Router();
+const User = require('../../models/user');
 
-const router = express.Router();
-
-// Get Posts
+// Get Users
 router.get('/', async (req, res) => {
-  const posts = await loadUsersCollection();
-  res.send(await posts.find({}).toArray());
-});
+  User.find({}, (err, users) => {
+    var userMap = {};
 
-// Add Post
-router.post('/', async (req, res) => {
-  const posts = await loadUsersCollection();
-  await posts.insertOne({
-    text: req.body.text,
-    createdAt: new Date()
+    users.forEach((user) => {
+      userMap[user._id] = user;
+    });
+
+    res.send(userMap);  
   });
-  res.status(201).send();
 });
 
-// Delete Post
+// Add User
+router.post('/', async (req, res) => {
+  const user = new User({
+    username: req.body.username,
+    email: req.body.email,
+    password: req.body.password,
+  });
+  try {
+    const savedUser = await user.save();
+    res.send(savedUser);
+  } catch (err) {
+    res.status(400).send(err);
+  }
+});
+
+// Delete User
 router.delete('/:id', async (req, res) => {
-  const posts = await loadUsersCollection();
-  await posts.deleteOne({ _id: new mongodb.ObjectID(req.params.id) });
-  res.status(200).send({});
+  User.deleteOne({ _id: req.params.id }, err => {
+    res.redirect('/');
+  });
 });
-
-async function loadUsersCollection() {
-  const client = await mongodb.MongoClient.connect(
-    'mongodb+srv://dany-costa:E3AzE6ezU@cluster0-o1ac3.mongodb.net/test?retryWrites=true&w=majority',
-    {
-      useUnifiedTopology: true
-    }
-  );
-
-  return client.db('blog').collection('user');
-}
 
 module.exports = router;

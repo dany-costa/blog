@@ -1,40 +1,51 @@
-const express = require('express');
-const mongodb = require('mongodb');
+const router = require('express').Router();
+const Post = require('../../models/post');
+require('../params')(router);
 
-const router = express.Router();
+//renders a single post
+router.get("/:post", (req, res) => {
+  req.post.populate(
+    { path: "comments" },
+    (err, post) => {
+      res.send(post);
+    }
+  );
+});
 
 // Get Posts
 router.get('/', async (req, res) => {
-  const posts = await loadPostsCollection();
-  res.send(await posts.find({}).toArray());
+  Post.find({}, (err, posts) => {
+    var postMap = {};
+
+    posts.forEach((post) => {
+      postMap[post._id] = post;
+    });
+
+    res.send(postMap);
+  });
 });
 
 // Add Post
 router.post('/', async (req, res) => {
-  const posts = await loadPostsCollection();
-  await posts.insertOne({
-    text: req.body.text,
-    createdAt: new Date()
+  const post = new Post({
+    title: req.body.title,
+    description: req.body.description,
+    content: req.body.content,
+    date: Date.now(),
   });
-  res.status(201).send();
+  try {
+    const savedPost = await post.save();
+    res.send(savedPost);
+  } catch (err) {
+    res.status(400).send(err);
+  }
 });
 
 // Delete Post
 router.delete('/:id', async (req, res) => {
-  const posts = await loadPostsCollection();
-  await posts.deleteOne({ _id: new mongodb.ObjectID(req.params.id) });
-  res.status(200).send({});
+  Post.deleteOne({ _id: req.params.id }, err => {
+    res.redirect('/');
+  });
 });
-
-async function loadPostsCollection() {
-  const client = await mongodb.MongoClient.connect(
-    'mongodb+srv://dany-costa:E3AzE6ezU@cluster0-o1ac3.mongodb.net/test?retryWrites=true&w=majority',
-    {
-        useUnifiedTopology: true
-    }
-  );
-
-  return client.db('blog').collection('posts');
-}
 
 module.exports = router;
