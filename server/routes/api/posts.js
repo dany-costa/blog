@@ -1,6 +1,20 @@
 const router = require('express').Router();
 const Post = require('../../models/post');
+const verify = require('../verifyToken');
+const multer = require("multer");
+const jwt = require("jsonwebtoken");
 require('../params')(router);
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "./server/public/");
+  },
+  filename: (req, file, cb) => {
+    cb(null, file.originalname);
+  }
+});
+
+const upload = multer({ storage: storage });
 
 //renders a single post
 router.get("/:post", (req, res) => {
@@ -15,23 +29,22 @@ router.get("/:post", (req, res) => {
 // Get Posts
 router.get('/', async (req, res) => {
   Post.find({}, (err, posts) => {
-    var postMap = {};
-
-    posts.forEach((post) => {
-      postMap[post._id] = post;
-    });
-
-    res.send(postMap);
+    res.send(posts);
   });
 });
 
 // Add Post
-router.post('/', async (req, res) => {
+router.post('/', verify, upload.single("file"),async (req, res) => {
+  const token = req.header('Authorization');
+  const decoded = jwt.decode(token, {complete: true});
+  const data = JSON.parse(req.body.data);
   const post = new Post({
-    title: req.body.title,
-    description: req.body.description,
-    content: req.body.content,
+    author: decoded.payload._id,
+    title: data.title,
+    description: data.description,
+    content: data.content,
     date: Date.now(),
+    image: req.file.filename
   });
   try {
     const savedPost = await post.save();
