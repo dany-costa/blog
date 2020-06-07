@@ -11,7 +11,6 @@ module.exports = (router) => {
             if (!post) {
                 return next(new Error("can't find post"));
             }
-
             req.post = post;
             return next();
         });
