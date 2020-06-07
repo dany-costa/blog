@@ -3,11 +3,12 @@ const Post = require('../../models/post');
 const verify = require('../verifyToken');
 const multer = require("multer");
 const jwt = require("jsonwebtoken");
+const path = require('path');
 require('../params')(router);
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "./public/");
+    cb(null, path.resolve(__dirname, 'public'));
   },
   filename: (req, file, cb) => {
     cb(null, file.originalname);
