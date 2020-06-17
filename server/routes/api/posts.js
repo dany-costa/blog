@@ -27,7 +27,7 @@ router.get("/:post", (req, res) => {
 
 // Get Posts
 router.get("/", async (req, res) => {
-  Post.find({}, (err, posts) => {
+  Post.find({}, null, { sort: "-date" }, (err, posts) => {
     res.send(posts);
   });
 });
@@ -49,6 +49,7 @@ router.put("/downvote/:post", verify, (req, res) => {
   Post.updateOne({ _id: req.post }, { $inc: { upvotes: -1 } }, (err) => {
     req.post.voters.pull(decoded.payload._id);
     req.post.save();
+    res.send("Done");
   });
 });
 

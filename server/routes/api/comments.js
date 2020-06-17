@@ -27,14 +27,10 @@ router.post("/new/:post", async (req, res) => {
     post: req.post,
     date: Date.now(),
   });
-  try {
-    const savedComment = await comment.save();
-    req.post.comments.push(savedComment);
-    req.post.save();
-    res.send(savedComment);
-  } catch (err) {
-    res.status(400).send(err);
-  }
+  const savedComment = await comment.save();
+  req.post.comments.push(savedComment);
+  req.post.save();
+  res.send(savedComment);
 });
 
 // Delete Comment
@@ -67,6 +63,7 @@ router.put("/downvote/:post/:comment", verify, (req, res) => {
     comment.upvotes -= 1;
     comment.voters.pull(decoded.payload._id);
     comment.save();
+    res.send("Done");
   });
 });
 
