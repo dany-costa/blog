@@ -2,56 +2,55 @@ const router = require("express").Router();
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../../models/user");
+const Joi = require("@hapi/joi");
 
-// Get Users
-router.get("/", async (req, res) => {
-  User.find({}, (err, users) => {
-    var userMap = {};
-
-    users.forEach((user) => {
-      userMap[user._id] = user;
-    });
-
-    res.send(userMap);
-  });
-});
+const schema = {
+  username: Joi.string().min(4).required(),
+  email: Joi.string().min(4).required().email(),
+  password: Joi.string().min(6).required(),
+};
 
 // Add User
-router.post("/register", async (req, res) => {
-  const emailExist = await User.findOne({ email: req.body.email });
-  if (emailExist) return res.status(400).send("Email already exists");
+router.post("/register", (req, res) => {
+  User.findOne({ email: req.body.email }, (user) => {
+    if (user) return res.status(500).send("Email already exists");
+  });
 
   const newUser = new User({
     username: req.body.username,
     email: req.body.email,
     password: bcrypt.hashSync(req.body.password, 8),
   });
-  try {
-    const savedUser = await newUser.save();
-    res.send(savedUser);
-  } catch (err) {
-    res.status(400).send(err);
-  }
+  newUser
+    .save()
+    .then((savedUser) => res.send(savedUser))
+    .catch((err) => res.status(500).send(err));
 });
 
 // Login User
-router.post("/login", async (req, res) => {
-  const user = await User.findOne({ email: req.body.email });
-  if (!user) return res.status(400).send("Email or password invalid");
+router.post("/login", (req, res) => {
+  User.findOne({ email: req.body.email }, (err, user) => {
+    if (!user) return res.status(500).send("Email or password invalid");
 
-  const validPass = await bcrypt.compare(req.body.password, user.password);
-  if (!validPass) return res.status(400).send("Invalid password");
-
-  const token = jwt.sign(
-    { _id: user._id, username: user.username, email: user.email },
-    process.env.TOKEN_SECRET
-  );
-  res
-    .header("auth-token", token)
-    .send({
-      token,
-      user: { id: user._id, username: user.username, email: user.email },
+    bcrypt.compare(req.body.password, user.password, (err, success) => {
+      if (err) {
+        return res.status(500).send(err);
+      }
+      if (success) {
+        const token = jwt.sign(
+          { _id: user._id, username: user.username, email: user.email },
+          process.env.TOKEN_SECRET
+        );
+        return res.header("auth-token", token).json({
+          token,
+          user: { id: user._id, username: user.username, email: user.email },
+        });
+      } else {
+        // response is OutgoingMessage object that server response http request
+        return res.status(500).send("Email or password invalid");
+      }
     });
+  });
 });
 
 // Delete User

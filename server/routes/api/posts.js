@@ -21,14 +21,16 @@ const upload = multer({ storage: storage });
 //renders a single post
 router.get("/:post", (req, res) => {
   req.post.populate({ path: "comments" }, (err, post) => {
-    res.send(post);
+    if (err) return res.status(500).send(err);
+    res.json(post);
   });
 });
 
 // Get Posts
 router.get("/", async (req, res) => {
   Post.find({}, null, { sort: "-date" }, (err, posts) => {
-    res.send(posts);
+    if (err) return res.status(500).send(err);
+    res.json(posts);
   });
 });
 
@@ -37,9 +39,10 @@ router.put("/upvote/:post", verify, (req, res) => {
   const decoded = jwt.decode(token, { complete: true });
   const userId = new ObjectID(decoded.payload._id);
   Post.updateOne({ _id: req.post }, { $inc: { upvotes: 1 } }, (err) => {
+    if (err) return res.status(500).send(err);
     req.post.voters.push(userId);
     req.post.save();
-    res.send("Done");
+    res.json({ success: true });
   });
 });
 
@@ -47,14 +50,15 @@ router.put("/downvote/:post", verify, (req, res) => {
   const token = req.header("Authorization");
   const decoded = jwt.decode(token, { complete: true });
   Post.updateOne({ _id: req.post }, { $inc: { upvotes: -1 } }, (err) => {
+    if (err) return res.status(500).send(err);
     req.post.voters.pull(decoded.payload._id);
     req.post.save();
-    res.send("Done");
+    res.json({ success: true });
   });
 });
 
 // Add Post
-router.post("/", verify, upload.single("file"), async (req, res) => {
+router.post("/", verify, upload.single("file"), (req, res) => {
   const token = req.header("Authorization");
   const decoded = jwt.decode(token, { complete: true });
   const data = JSON.parse(req.body.data);
@@ -66,12 +70,14 @@ router.post("/", verify, upload.single("file"), async (req, res) => {
     date: Date.now(),
     image: req.file.filename,
   });
-  try {
-    const savedPost = await post.save();
-    res.send(savedPost);
-  } catch (err) {
-    res.status(400).send(err);
-  }
+  post
+    .save(post)
+    .then((savedPost) => {
+      res.json(savedPost);
+    })
+    .catch((err) => {
+      res.status(500).send(err);
+    });
 });
 
 // Delete Post
