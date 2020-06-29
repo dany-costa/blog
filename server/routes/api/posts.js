@@ -21,40 +21,35 @@ const upload = multer({ storage: storage });
 //renders a single post
 router.get("/:post", (req, res) => {
   req.post.populate({ path: "comments" }, (err, post) => {
-    if (err) return res.status(500).send(err);
-    res.json(post);
+    if (err)
+      return res.status(500).send({ success: false, error: { message: err } });
+    res.json({ post, success: true });
   });
 });
 
 // Get Posts
 router.get("/", async (req, res) => {
   Post.find({}, null, { sort: "-date" }, (err, posts) => {
-    if (err) return res.status(500).send(err);
-    res.json(posts);
+    if (err)
+      return res.status(500).send({ success: false, error: { message: err } });
+    res.json({ posts, success: true });
   });
 });
 
 router.put("/upvote/:post", verify, (req, res) => {
   const token = req.header("Authorization");
   const decoded = jwt.decode(token, { complete: true });
-  const userId = new ObjectID(decoded.payload._id);
-  Post.updateOne({ _id: req.post }, { $inc: { upvotes: 1 } }, (err) => {
-    if (err) return res.status(500).send(err);
-    req.post.voters.push(userId);
-    req.post.save();
-    res.json({ success: true });
-  });
+  req.post.voters.push(decoded.payload._id);
+  req.post.save();
+  res.json({ success: true });
 });
 
 router.put("/downvote/:post", verify, (req, res) => {
   const token = req.header("Authorization");
   const decoded = jwt.decode(token, { complete: true });
-  Post.updateOne({ _id: req.post }, { $inc: { upvotes: -1 } }, (err) => {
-    if (err) return res.status(500).send(err);
-    req.post.voters.pull(decoded.payload._id);
-    req.post.save();
-    res.json({ success: true });
-  });
+  req.post.voters.pull(decoded.payload._id);
+  req.post.save();
+  res.json({ success: true });
 });
 
 // Add Post
@@ -73,10 +68,10 @@ router.post("/", verify, upload.single("file"), (req, res) => {
   post
     .save(post)
     .then((savedPost) => {
-      res.json(savedPost);
+      res.json({ savedPost, success: true });
     })
     .catch((err) => {
-      res.status(500).send(err);
+      res.status(500).send({ success: false, error: { message: err } });
     });
 });
 

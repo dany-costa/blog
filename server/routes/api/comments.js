@@ -7,13 +7,14 @@ require("../params")(router);
 // Get Comments
 router.get("/", async (req, res) => {
   Comment.find({}, (err, comments) => {
-    if (err) return res.status(500).send(err);
+    if (err)
+      return res.status(500).send({ success: false, error: { message: err } });
     var commentMap = {};
     comments.forEach((comment) => {
       commentMap[comment._id] = comments;
     });
 
-    res.json(commentMap);
+    res.json({ commentMap, success: true });
   });
 });
 
@@ -28,10 +29,11 @@ router.post("/new/:post", verify, async (req, res) => {
     date: Date.now(),
   });
   await comment.save((err, newComment) => {
-    if (err) return res.status(500).send(err);
+    if (err)
+      return res.status(500).send({ success: false, error: { message: err } });
     req.post.comments.push(newComment._id);
     req.post.save();
-    res.send(newComment);
+    res.json({ newComment, success: true });
   });
 });
 
@@ -39,10 +41,11 @@ router.post("/new/:post", verify, async (req, res) => {
 router.delete("/delete/:post/:comment", (req, res) => {
   const id = req.params.comment;
   Comment.deleteOne({ _id: id }, (err) => {
-    if (err) return res.status(500).send(err);
+    if (err)
+      return res.status(500).send({ success: false, error: { message: err } });
     req.post.comments.pull(id);
     req.post.save();
-    res.send("Deleted");
+    res.json({ success: true });
   });
 });
 
@@ -51,11 +54,11 @@ router.put("/upvote/:post/:comment", verify, (req, res) => {
   const token = req.header("Authorization");
   const decoded = jwt.decode(token, { complete: true });
   Comment.findOne({ _id: id }, (err, comment) => {
-    if (err) return res.status(500).send(err);
-    comment.upvotes += 1;
+    if (err)
+      return res.status(500).send({ success: false, error: { message: err } });
     comment.voters.push(decoded.payload._id);
     comment.save();
-    res.send("Done");
+    res.json({ success: true });
   });
 });
 
@@ -64,11 +67,11 @@ router.put("/downvote/:post/:comment", verify, (req, res) => {
   const token = req.header("Authorization");
   const decoded = jwt.decode(token, { complete: true });
   Comment.findOne({ _id: id }, (err, comment) => {
-    if (err) return res.status(500).send(err);
-    comment.upvotes -= 1;
+    if (err)
+      return res.status(500).send({ success: false, error: { message: err } });
     comment.voters.pull(decoded.payload._id);
     comment.save();
-    res.send("Done");
+    res.send({ success: true });
   });
 });
 
