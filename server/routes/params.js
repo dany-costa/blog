@@ -1,4 +1,4 @@
-const Post = require('../models/post');
+const Post = require("../models/post");
 
 module.exports = (router) => {
     router.param("post", (req, res, next, id) => {
@@ -15,4 +15,4 @@ module.exports = (router) => {
             return next();
         });
     });
-}
+};
