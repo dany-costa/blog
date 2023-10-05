@@ -19,7 +19,7 @@ mongoose
         useCreateIndex: true,
     })
     .then(() => console.log("You are now connected to Mongo!"))
-    .catch((err) => console.error("Something went wrong", err));
+    .catch((err) => console.error("Something went wrong error: ", err));
 
 // Middleware
 app.use(bodyParser.urlencoded({ extended: false }));
